@@ -689,23 +689,26 @@ class SymbolAnalyzer {
 
     async loadCurrentPrice() {
         try {
-            // 여러 API 소스를 시도
+            // 여러 API 소스를 시도 (Finnhub 우선)
             const apis = [
+                this.tryFinnhubAPI(),
                 this.tryYahooFinanceAPI(),
-                this.tryAlphaVantageAPI(),
-                this.tryIEXCloudAPI()
+                this.tryPolygonAPI()
             ];
             
-            for (const apiCall of apis) {
+            for (let i = 0; i < apis.length; i++) {
                 try {
-                    const price = await apiCall;
+                    const price = await apis[i];
                     if (price && price > 0) {
                         this.currentPrice = price;
-                        console.log(`${this.symbol} 현재가 로드 성공: $${price}`);
+                        const apiNames = ['Finnhub', 'Yahoo Finance', 'Polygon'];
+                        console.log(`${this.symbol} 현재가 로드 성공 (${apiNames[i]}): $${price}`);
+                        this.isMockData = false;
                         return;
                     }
                 } catch (error) {
-                    console.warn(`${this.symbol} API 시도 실패:`, error.message);
+                    const apiNames = ['Finnhub', 'Yahoo Finance', 'Polygon'];
+                    console.warn(`${this.symbol} ${apiNames[i]} API 시도 실패:`, error.message);
                     continue;
                 }
             }
@@ -758,13 +761,27 @@ class SymbolAnalyzer {
 
     async tryFinnhubAPI() {
         // Finnhub 무료 API (분당 60회 제한)
-        const apiKey = 'demo'; // 실제 사용시 무료 API 키 필요
+        const apiKey = 'd3noq61r01qhclk39ir0d3noq61r01qhclk39irg';
         const url = `https://finnhub.io/api/v1/quote?symbol=${this.symbol}&token=${apiKey}`;
         
+        console.log(`${this.symbol} Finnhub API 호출 중...`);
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Finnhub API 응답 실패');
+        
+        if (!response.ok) {
+            throw new Error(`Finnhub API 응답 실패: ${response.status}`);
+        }
         
         const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(`Finnhub API 에러: ${data.error}`);
+        }
+        
+        if (!data.c || data.c === 0) {
+            throw new Error('Finnhub API: 유효하지 않은 가격 데이터');
+        }
+        
+        console.log(`${this.symbol} Finnhub API 성공: $${data.c}`);
         return data.c; // current price
     }
 
@@ -785,6 +802,16 @@ class SymbolAnalyzer {
 
     async loadHistoricalData() {
         try {
+            // Finnhub API로 히스토리컬 데이터 시도
+            try {
+                await this.loadHistoricalDataFromFinnhub();
+                console.log(`${this.symbol} Finnhub 히스토리컬 데이터 로드 성공`);
+                return;
+            } catch (error) {
+                console.warn(`${this.symbol} Finnhub 히스토리컬 데이터 실패:`, error.message);
+            }
+            
+            // Yahoo Finance API로 폴백
             const endTime = Math.floor(Date.now() / 1000);
             const startTime = endTime - (365 * 24 * 60 * 60);
             
@@ -803,10 +830,40 @@ class SymbolAnalyzer {
                 date: new Date(timestamp * 1000),
                 close: closes[index]
             })).filter(item => item.close !== null);
+            
+            console.log(`${this.symbol} Yahoo Finance 히스토리컬 데이터 로드 성공`);
         } catch (error) {
             console.error(`${this.symbol} 히스토리컬 데이터 로딩 실패:`, error);
             throw error;
         }
+    }
+
+    async loadHistoricalDataFromFinnhub() {
+        const apiKey = 'd3noq61r01qhclk39ir0d3noq61r01qhclk39irg';
+        const endTime = Math.floor(Date.now() / 1000);
+        const startTime = endTime - (365 * 24 * 60 * 60);
+        
+        const url = `https://finnhub.io/api/v1/stock/candle?symbol=${this.symbol}&resolution=D&from=${startTime}&to=${endTime}&token=${apiKey}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Finnhub 히스토리컬 API 응답 실패: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.s !== 'ok') {
+            throw new Error(`Finnhub 히스토리컬 API 에러: ${data.s}`);
+        }
+        
+        if (!data.c || data.c.length === 0) {
+            throw new Error('Finnhub 히스토리컬 API: 데이터 없음');
+        }
+        
+        this.historicalData = data.t.map((timestamp, index) => ({
+            date: new Date(timestamp * 1000),
+            close: data.c[index]
+        })).filter(item => item.close !== null);
     }
 
     generateMockData() {
