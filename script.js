@@ -692,6 +692,7 @@ class SymbolAnalyzer {
             // 여러 API 소스를 시도 (Finnhub 우선)
             const apis = [
                 this.tryFinnhubAPI(),
+                this.tryAlphaVantageAPI(),
                 this.tryYahooFinanceAPI(),
                 this.tryPolygonAPI()
             ];
@@ -701,13 +702,13 @@ class SymbolAnalyzer {
                     const price = await apis[i];
                     if (price && price > 0) {
                         this.currentPrice = price;
-                        const apiNames = ['Finnhub', 'Yahoo Finance', 'Polygon'];
+                        const apiNames = ['Finnhub', 'Alpha Vantage', 'Yahoo Finance', 'Polygon'];
                         console.log(`${this.symbol} 현재가 로드 성공 (${apiNames[i]}): $${price}`);
                         this.isMockData = false;
                         return;
                     }
                 } catch (error) {
-                    const apiNames = ['Finnhub', 'Yahoo Finance', 'Polygon'];
+                    const apiNames = ['Finnhub', 'Alpha Vantage', 'Yahoo Finance', 'Polygon'];
                     console.warn(`${this.symbol} ${apiNames[i]} API 시도 실패:`, error.message);
                     continue;
                 }
@@ -738,8 +739,40 @@ class SymbolAnalyzer {
     }
 
     async tryAlphaVantageAPI() {
-        // Alpha Vantage는 무료 API 키가 필요하므로 일단 스킵
-        throw new Error('Alpha Vantage API 키 필요');
+        // Alpha Vantage 무료 API (일일 25회 제한)
+        // 무료 API 키: demo (제한적 사용 가능)
+        const apiKey = 'demo'; // 실제 사용시 무료 API 키 발급 필요
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${this.symbol}&apikey=${apiKey}`;
+        
+        console.log(`${this.symbol} Alpha Vantage API 호출 중...`);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Alpha Vantage API 응답 실패: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data['Error Message']) {
+            throw new Error(`Alpha Vantage API 에러: ${data['Error Message']}`);
+        }
+        
+        if (data['Note']) {
+            throw new Error(`Alpha Vantage API 제한: ${data['Note']}`);
+        }
+        
+        const quote = data['Global Quote'];
+        if (!quote || !quote['05. price']) {
+            throw new Error('Alpha Vantage API: 유효하지 않은 데이터');
+        }
+        
+        const price = parseFloat(quote['05. price']);
+        if (price <= 0) {
+            throw new Error('Alpha Vantage API: 유효하지 않은 가격');
+        }
+        
+        console.log(`${this.symbol} Alpha Vantage API 성공: $${price}`);
+        return price;
     }
 
     async tryIEXCloudAPI() {
