@@ -786,18 +786,18 @@ class SymbolAnalyzer {
     }
 
     generateMockCurrentPrice() {
-        // 실제와 유사한 가격 범위로 모의 데이터 생성
+        // 2025년 1월 실제 주가 기준으로 모의 데이터 생성
         const priceRanges = {
-            'TQQQ': { base: 45.50, volatility: 2.0 },
-            'SOXL': { base: 35.20, volatility: 3.0 },
-            'UPRO': { base: 62.80, volatility: 1.5 }
+            'TQQQ': { base: 101.13, volatility: 3.0 },  // 실제 주가 기준
+            'SOXL': { base: 28.50, volatility: 2.5 },   // 반도체 ETF
+            'UPRO': { base: 85.20, volatility: 2.0 }    // S&P 500 3배 레버리지
         };
         
         const range = priceRanges[this.symbol] || { base: 50, volatility: 2 };
         const variation = (Math.random() - 0.5) * range.volatility;
         this.currentPrice = Math.round((range.base + variation) * 100) / 100;
         
-        console.log(`${this.symbol} 모의 현재가 생성: $${this.currentPrice}`);
+        console.log(`${this.symbol} 모의 현재가 생성 (실제 주가 기준): $${this.currentPrice}`);
     }
 
     async loadHistoricalData() {
@@ -869,11 +869,11 @@ class SymbolAnalyzer {
     generateMockData() {
         console.log(`${this.symbol} 모의 데이터 생성 중...`);
         
-        // 종목별 기본 가격 범위 설정
+        // 2025년 1월 실제 주가 기준으로 히스토리컬 데이터 생성
         const priceRanges = {
-            'TQQQ': { base: 45, volatility: 15 },
-            'SOXL': { base: 35, volatility: 20 },
-            'UPRO': { base: 60, volatility: 12 }
+            'TQQQ': { base: 101, volatility: 25 },  // 실제 주가 기준
+            'SOXL': { base: 28, volatility: 15 },   // 반도체 ETF
+            'UPRO': { base: 85, volatility: 18 }    // S&P 500 3배 레버리지
         };
         
         const range = priceRanges[this.symbol] || { base: 50, volatility: 15 };
