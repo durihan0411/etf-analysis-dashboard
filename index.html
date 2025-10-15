@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TQQQ 현재가 vs 1년 최고가 비교</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 로그인 화면 -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🔐 ETF 분석 대시보드</h1>
+                <p class="login-subtitle">실시간 레버리지 ETF 분석 시스템</p>
+            </div>
+            
+            <div class="login-form">
+                <div class="form-group">
+                    <label for="password">접근 암호</label>
+                    <input type="password" id="password" placeholder="암호를 입력하세요" autocomplete="off">
+                    <div class="password-toggle" id="passwordToggle">
+                        <span class="toggle-icon">👁️</span>
+                    </div>
+                </div>
+                
+                <button type="button" id="loginButton" class="login-button">
+                    <span class="button-text">로그인</span>
+                    <span class="button-icon">🚀</span>
+                </button>
+                
+                <div class="login-error" id="loginError">
+                    ❌ 잘못된 암호입니다. 다시 시도해주세요.
+                </div>
+                
+            </div>
+            
+            <div class="login-footer">
+                <p>© 2024 ETF Analysis Dashboard</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 컨텐츠 -->
+    <div class="main-content" id="mainContent" style="display: none;">
+        <div class="container">
+        <header>
+            <h1>레버리지 ETF 분석 대시보드</h1>
+            <p class="subtitle">실시간 가격 분석 및 1년 최고가 비교</p>
+        </header>
+
+        <!-- 탭 네비게이션 -->
+        <nav class="tab-navigation">
+            <button class="tab-button active" data-symbol="TQQQ">
+                <span class="tab-icon">📈</span>
+                <span class="tab-text">TQQQ</span>
+                <span class="tab-desc">3x QQQ</span>
+            </button>
+            <button class="tab-button" data-symbol="SOXL">
+                <span class="tab-icon">🔧</span>
+                <span class="tab-text">SOXL</span>
+                <span class="tab-desc">3x SOXX</span>
+            </button>
+            <button class="tab-button" data-symbol="UPRO">
+                <span class="tab-icon">🇺🇸</span>
+                <span class="tab-text">UPRO</span>
+                <span class="tab-desc">3x S&P500</span>
+            </button>
+        </nav>
+
+        <!-- 탭 컨텐츠 -->
+        <div class="tab-content">
+            <!-- TQQQ 탭 -->
+            <div class="tab-pane active" id="TQQQ-tab">
+                <div class="main-content">
+                    <!-- 현재가 정보 카드 -->
+                    <div class="price-card current-price">
+                        <div class="card-header">
+                            <h2>현재가</h2>
+                            <div class="last-updated" id="TQQQ-lastUpdated"></div>
+                        </div>
+                        <div class="price-info">
+                            <div class="price-value" id="TQQQ-currentPrice">-</div>
+                            <div class="price-change" id="TQQQ-priceChange">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 1년 최고가 정보 카드 -->
+                    <div class="price-card high-price">
+                        <div class="card-header">
+                            <h2>1년 최고가</h2>
+                        </div>
+                        <div class="price-info">
+                            <div class="price-value" id="TQQQ-yearHighPrice">-</div>
+                            <div class="high-date" id="TQQQ-highDate">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 비교 분석 카드 -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h2>비교 분석</h2>
+                        </div>
+                        <div class="analysis-content">
+                            <div class="comparison-item">
+                                <span class="label">최고가 대비:</span>
+                                <span class="value" id="TQQQ-vsHighPercent">-</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span class="label">최고가와의 차이:</span>
+                                <span class="value" id="TQQQ-vsHighDiff">-</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span class="label">회복 필요 비율:</span>
+                                <span class="value" id="TQQQ-recoveryPercent">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 차트 섹션 -->
+                <div class="chart-section">
+                    <h2>TQQQ - 1년 가격 추이</h2>
+                    <div class="chart-container">
+                        <canvas id="TQQQ-priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SOXL 탭 -->
+            <div class="tab-pane" id="SOXL-tab">
+                <div class="main-content">
+                    <!-- 현재가 정보 카드 -->
+                    <div class="price-card current-price">
+                        <div class="card-header">
+                            <h2>현재가</h2>
+                            <div class="last-updated" id="SOXL-lastUpdated"></div>
+                        </div>
+                        <div class="price-info">
+                            <div class="price-value" id="SOXL-currentPrice">-</div>
+                            <div class="price-change" id="SOXL-priceChange">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 1년 최고가 정보 카드 -->
+                    <div class="price-card high-price">
+                        <div class="card-header">
+                            <h2>1년 최고가</h2>
+                        </div>
+                        <div class="price-info">
+                            <div class="price-value" id="SOXL-yearHighPrice">-</div>
+                            <div class="high-date" id="SOXL-highDate">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 비교 분석 카드 -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h2>비교 분석</h2>
+                        </div>
+                        <div class="analysis-content">
+                            <div class="comparison-item">
+                                <span class="label">최고가 대비:</span>
+                                <span class="value" id="SOXL-vsHighPercent">-</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span class="label">최고가와의 차이:</span>
+                                <span class="value" id="SOXL-vsHighDiff">-</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span class="label">회복 필요 비율:</span>
+                                <span class="value" id="SOXL-recoveryPercent">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 차트 섹션 -->
+                <div class="chart-section">
+                    <h2>SOXL - 1년 가격 추이</h2>
+                    <div class="chart-container">
+                        <canvas id="SOXL-priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPRO 탭 -->
+            <div class="tab-pane" id="UPRO-tab">
+                <div class="main-content">
+                    <!-- 현재가 정보 카드 -->
+                    <div class="price-card current-price">
+                        <div class="card-header">
+                            <h2>현재가</h2>
+                            <div class="last-updated" id="UPRO-lastUpdated"></div>
+                        </div>
+                        <div class="price-info">
+                            <div class="price-value" id="UPRO-currentPrice">-</div>
+                            <div class="price-change" id="UPRO-priceChange">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 1년 최고가 정보 카드 -->
+                    <div class="price-card high-price">
+                        <div class="card-header">
+                            <h2>1년 최고가</h2>
+                        </div>
+                        <div class="price-info">
+                            <div class="price-value" id="UPRO-yearHighPrice">-</div>
+                            <div class="high-date" id="UPRO-highDate">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 비교 분석 카드 -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h2>비교 분석</h2>
+                        </div>
+                        <div class="analysis-content">
+                            <div class="comparison-item">
+                                <span class="label">최고가 대비:</span>
+                                <span class="value" id="UPRO-vsHighPercent">-</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span class="label">최고가와의 차이:</span>
+                                <span class="value" id="UPRO-vsHighDiff">-</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span class="label">회복 필요 비율:</span>
+                                <span class="value" id="UPRO-recoveryPercent">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 차트 섹션 -->
+                <div class="chart-section">
+                    <h2>UPRO - 1년 가격 추이</h2>
+                    <div class="chart-container">
+                        <canvas id="UPRO-priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 추가 정보 -->
+        <div class="info-section">
+            <div class="info-card">
+                <h3>ETF 정보</h3>
+                <div class="etf-info-content" id="current-etf-info">
+                    <ul>
+                        <li><strong>종목명:</strong> ProShares UltraPro QQQ</li>
+                        <li><strong>티커:</strong> TQQQ</li>
+                        <li><strong>유형:</strong> 레버리지 ETF</li>
+                        <li><strong>기초지수:</strong> NASDAQ-100</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>주의사항</h3>
+                <ul>
+                    <li>모든 ETF는 3배 레버리지 ETF입니다</li>
+                    <li>장기 투자 시 손실 위험이 높습니다</li>
+                    <li>데이터는 Yahoo Finance API를 통해 제공됩니다</li>
+                    <li>실시간 데이터는 시장 개장 시간에만 업데이트됩니다</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 로딩 오버레이 -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p id="loadingText">데이터를 불러오는 중...</p>
+                <div class="loading-progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <p id="loadingProgress">0%</p>
+            </div>
+        </div>
+    </div>
+    </div> <!-- main-content 닫기 -->
+
+    <script src="script.js"></script>
+</body>
+</html>
