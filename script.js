@@ -363,7 +363,10 @@ class ETFAnalyzer {
         
         const lastUpdatedElement = document.getElementById(`${symbol}-lastUpdated`);
         if (lastUpdatedElement) {
-            lastUpdatedElement.textContent = new Date().toLocaleString('ko-KR');
+            const now = new Date();
+            const timeString = now.toLocaleString('ko-KR');
+            const dataSource = analyzer.isMockData ? ' (모의 데이터)' : ' (실시간)';
+            lastUpdatedElement.textContent = timeString + dataSource;
         }
         
         // 1년 최고가 업데이트
@@ -673,6 +676,7 @@ class SymbolAnalyzer {
         this.yearHighPrice = 0;
         this.yearHighDate = '';
         this.historicalData = [];
+        this.isMockData = false;
     }
 
     async loadData() {
@@ -685,19 +689,98 @@ class SymbolAnalyzer {
 
     async loadCurrentPrice() {
         try {
-            const proxyUrl = 'https://api.allorigins.win/get?url=';
-            const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${this.symbol}`;
-            const response = await fetch(proxyUrl + encodeURIComponent(yahooUrl));
-            const data = await response.json();
+            // 여러 API 소스를 시도
+            const apis = [
+                this.tryYahooFinanceAPI(),
+                this.tryAlphaVantageAPI(),
+                this.tryIEXCloudAPI()
+            ];
             
-            const parsedData = JSON.parse(data.contents);
-            const quote = parsedData.chart.result[0].meta;
+            for (const apiCall of apis) {
+                try {
+                    const price = await apiCall;
+                    if (price && price > 0) {
+                        this.currentPrice = price;
+                        console.log(`${this.symbol} 현재가 로드 성공: $${price}`);
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`${this.symbol} API 시도 실패:`, error.message);
+                    continue;
+                }
+            }
             
-            this.currentPrice = quote.regularMarketPrice;
+            // 모든 API 실패 시 모의 데이터 사용
+            console.warn(`${this.symbol} 모든 API 실패, 모의 데이터 사용`);
+            this.isMockData = true;
+            this.generateMockCurrentPrice();
+            
         } catch (error) {
             console.error(`${this.symbol} 현재가 로딩 실패:`, error);
-            throw error;
+            this.isMockData = true;
+            this.generateMockCurrentPrice();
         }
+    }
+
+    async tryYahooFinanceAPI() {
+        const proxyUrl = 'https://api.allorigins.win/get?url=';
+        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${this.symbol}`;
+        const response = await fetch(proxyUrl + encodeURIComponent(yahooUrl));
+        const data = await response.json();
+        
+        const parsedData = JSON.parse(data.contents);
+        const quote = parsedData.chart.result[0].meta;
+        
+        return quote.regularMarketPrice;
+    }
+
+    async tryAlphaVantageAPI() {
+        // Alpha Vantage는 무료 API 키가 필요하므로 일단 스킵
+        throw new Error('Alpha Vantage API 키 필요');
+    }
+
+    async tryIEXCloudAPI() {
+        // IEX Cloud도 API 키가 필요하므로 일단 스킵
+        throw new Error('IEX Cloud API 키 필요');
+    }
+
+    async tryPolygonAPI() {
+        // Polygon.io 무료 API (일일 5회 제한)
+        const apiKey = 'demo'; // 실제 사용시 무료 API 키 필요
+        const url = `https://api.polygon.io/v1/last/stocks/${this.symbol}?apikey=${apiKey}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Polygon API 응답 실패');
+        
+        const data = await response.json();
+        return data.results?.p;
+    }
+
+    async tryFinnhubAPI() {
+        // Finnhub 무료 API (분당 60회 제한)
+        const apiKey = 'demo'; // 실제 사용시 무료 API 키 필요
+        const url = `https://finnhub.io/api/v1/quote?symbol=${this.symbol}&token=${apiKey}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Finnhub API 응답 실패');
+        
+        const data = await response.json();
+        return data.c; // current price
+    }
+
+    generateMockCurrentPrice() {
+        // 실제와 유사한 가격 범위로 모의 데이터 생성
+        const priceRanges = {
+            'TQQQ': { base: 45.50, volatility: 2.0 },
+            'SOXL': { base: 35.20, volatility: 3.0 },
+            'UPRO': { base: 62.80, volatility: 1.5 }
+        };
+        
+        const range = priceRanges[this.symbol] || { base: 50, volatility: 2 };
+        const variation = (Math.random() - 0.5) * range.volatility;
+        this.currentPrice = Math.round((range.base + variation) * 100) / 100;
+        
+        console.log(`${this.symbol} 모의 현재가 생성: $${this.currentPrice}`);
     }
 
     async loadHistoricalData() {
